@@ -1,0 +1,67 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+  ],
+  "mcp": {
+    "Tavily": {
+      "command": [
+        "npx",
+        "-y",
+        "tavily-mcp@latest"
+      ],
+      "enabled": true,
+      "environment": {
+        "TAVILY_API_KEY": "----------------------------------"
+      },
+      "type": "local"
+    },
+    "BraveSearch": {
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-brave-search@latest"
+      ],
+      "enabled": true,
+      "environment": {
+        "BRAVE_API_KEY": "----------------------------------"
+      },
+      "type": "local"
+    },
+    "BingSearch": {
+      "command": [
+        "npx",
+        "-y",
+        "bing-cn-mcp@latest"
+      ],
+      "enabled": true,
+      "environment": {
+      },
+      "type": "local"
+    },
+    "TrendsHub": {
+      "command": [
+        "npx",
+        "-y",
+        "mcp-trends-hub@latest"
+      ],
+      "enabled": true,
+      "environment": {
+      },
+      "type": "local"
+    },
+    "Playwright": {
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@latest",
+        "--viewport-size=700x930"
+      ],
+      "enabled": true,
+      "environment": {
+      },
+      "type": "local"
+    }
+  },
+  "provider": {
+  }
+}

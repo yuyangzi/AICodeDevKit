@@ -1,0 +1,71 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "agents": {
+    "hephaestus": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "oracle": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "librarian": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "explore": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "multimodal-looker": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "prometheus": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "metis": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "momus": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "atlas": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    },
+    "sisyphus": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "enabled": true
+    }
+  },
+  "categories": {
+    "visual-engineering": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "ultrabrain": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "deep": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "artistry": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "quick": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "unspecified-low": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "unspecified-high": {
+      "model": "opencode/deepseek-v4-flash-free"
+    },
+    "writing": {
+      "model": "opencode/deepseek-v4-flash-free"
+    }
+  }
+}
