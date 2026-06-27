@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.*
+*.local
+
+# Build / Dist
+dist/
+build/
+*.pyc
+__pycache__/
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+*.log.*
+
+# Temp
+*.tmp
+*.temp
+*.swp
+
+# Coverage
+.coverage
+*.cover
+htmlcov/
+
+# Misc
+*.orig
+*.bak
+*.cache
