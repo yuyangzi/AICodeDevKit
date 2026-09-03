@@ -47,3 +47,4 @@ htmlcov/
 *.orig
 *.bak
 *.cache
+:Zone.Identifier
