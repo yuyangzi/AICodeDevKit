@@ -47,4 +47,6 @@ htmlcov/
 *.orig
 *.bak
 *.cache
-:Zone.Identifier
+
+# Windows ADS metadata
+*:Zone.Identifier

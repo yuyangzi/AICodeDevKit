@@ -8,31 +8,76 @@ description: 审查设计或实施文档
 
 ## 第一步：确定审查深度和文档类型
 
-根据用户参数判断：
+根据用户参数判断文档类型和深度：
 
-| 信号 | 审查深度 | Agent 配置 |
-|------|---------|-----------|
-| 无特殊标记（默认） | **标准审查** | Metis（意图/歧义/风险）+ Momus（清晰性/可验证性/完整性/技术准确性） |
-| `quick` / `fast` | **快速抽查** | 仅 Momus（单 Agent，验证修复落地） |
-| `deep` / `full` | **深度审查** | Metis + Momus，必要时追加 Oracle（架构决策、安全影响） |
+| 信号 | 文档类型 | 审查深度 | Agent 配置 |
+|------|---------|---------|-----------|
+| 无特殊标记，路径含 `specs/` | **设计文档** | **标准** | `design-critic`（单 Agent，架构质询） |
+| 无特殊标记，路径含 `plans/` | **实施计划** | **标准** | `plan-reviewer`（单 Agent，可执行性审查） |
+| `quick` / `fast` | 按文档类型路由 | **快速抽查** | 同标准 Agent（spec→design-critic, plan→plan-reviewer），prompt 附加 "quick review: 仅验证上轮修复是否落地" |
+| `deep` / `full` | 任意 | **深度审查** | `design-critic` + `plan-reviewer` 双 Agent，必要时追加 Oracle |
 
 **示例**：
-- `docs/superpowers/specs/xxx.md` → 标准审查
-- `docs/superpowers/plans/xxx.md quick` → 快速抽查
-- `docs/superpowers/plans/xxx.md deep` → 深度审查
+- `docs/superpowers/specs/xxx.md` → 设计文档，标准审查（design-critic）
+- `docs/superpowers/plans/xxx.md` → 实施计划，标准审查（plan-reviewer）
+- `docs/superpowers/plans/xxx.md quick` → 快速抽查（plan-reviewer，仅验证修复）
+- `docs/superpowers/specs/xxx.md quick` → 快速抽查（design-critic，仅验证修复）
+- `docs/superpowers/specs/xxx.md deep` → 深度审查（双 Agent）
 
-## 第二步：并行启动审查 Agent
+## 第二步：根据文档类型启动审查 Agent
+
+### 设计文档（specs/）
 
 ```python
-task(subagent_type="metis", run_in_background=true, load_skills=[], description="Metis review [doc]", prompt="审查文档: {filepath}")
-task(subagent_type="momus", run_in_background=true, load_skills=[], description="Momus review [doc]", prompt="审查文档: {filepath}")
+task(subagent_type="design-critic", run_in_background=true, load_skills=[], description="design-critic review [doc]", prompt="审查文档: {filepath}")
 ```
 
-等待两个 Agent 都完成后收集结果。
+### 实施计划（plans/）
+
+```python
+task(subagent_type="plan-reviewer", run_in_background=true, load_skills=[], description="plan-reviewer review [doc]", prompt="审查文档: {filepath}")
+```
+
+### 快速抽查（quick/fast）
+
+使用与标准审查相同的 Agent，但 prompt 末尾附加 `\n\n**快速模式**: 仅验证上轮修复是否已落地。跳过全量检查，直接检查上轮指出的问题是否已修复。` 以触发渐进式审查深度。
+
+```python
+task(subagent_type="design-critic", run_in_background=true, load_skills=[], description="design-critic quick review [doc]", prompt="审查文档: {filepath}\n\n**快速模式**: 仅验证上轮修复是否已落地。跳过全量检查，直接检查上轮指出的问题是否已修复。")
+```
+
+### 深度审查（deep/full）
+
+```python
+task(subagent_type="design-critic", run_in_background=true, load_skills=[], description="design-critic review [doc]", prompt="审查文档: {filepath}")
+task(subagent_type="plan-reviewer", run_in_background=true, load_skills=[], description="plan-reviewer review [doc]", prompt="审查文档: {filepath}")
+```
+
+等待 Agent 完成后收集结果。
+
+### 任务 ID 失效兜底（必备）
+
+如果后台 Agent 任务 ID 失效（超时、跨会话、会话重启），**不要手动 cancel + 重派**。改用兜底逻辑：
+
+```python
+# 1. 尝试从失效的 task_id 读取（可能已失败）
+try:
+    result = await background_output(task_id=task_id, block=False)
+except Exception:
+    result = None
+
+# 2. 兜底：用 session_read 读取该 agent 会话的完整消息
+if result is None:
+    # 通过 session 工具读取 agent 的实际输出
+    session = await session_read(session_id=agent_session_id)
+    result = session
+```
+
+规则：task_id 失效时，用 `session_read` 读取 agent 会话内容作为兜底结果，绝不重复派发同一审查。
 
 ## 第三步：合成审查报告（结构化）
 
-将 Metis + Momus 发现合并为统一报告，**必须**按以下格式呈现：
+将 Agent 发现合并为统一报告，**必须**按以下格式呈现：
 
 ```
 ## 审查报告：[文档名]
@@ -40,7 +85,7 @@ task(subagent_type="momus", run_in_background=true, load_skills=[], description=
 ### 🔴 阻断性问题（必须修复才能继续）
 | # | 问题 | 来源 | 位置 |
 |---|------|------|------|
-| 1 | ... | Metis/Momus | ... |
+| 1 | ... | design-critic/plan-reviewer | ... |
 
 ### 🟠 高优先级（执行中必遇）
 | # | 问题 | 来源 |
@@ -57,8 +102,8 @@ task(subagent_type="momus", run_in_background=true, load_skills=[], description=
 - 项2
 
 ### 四维度评估（仅 Plan 审查时）
-| 维度 | Metis | Momus |
-|------|-------|-------|
+| 维度 | design-critic | plan-reviewer |
+|------|---------------|---------------|
 | ① 清晰度 | ✅/❌ | ✅/❌ |
 | ② 可验证性 | ✅/❌ | ✅/❌ |
 | ③ 完整性 | ✅/❌ | ✅/❌ |
@@ -66,8 +111,8 @@ task(subagent_type="momus", run_in_background=true, load_skills=[], description=
 ```
 
 **关键规则**：
-- 每个问题必须标注严重度（🔴🟠🟡）和来源（Metis/Momus/共识）
-- 共识项（两个 Agent 都发现）精炼为一条，标注"共识"
+- 每个问题必须标注严重度（🔴🟠🟡）和来源（design-critic/plan-reviewer/共识）
+- 共识项（多个 Agent 都发现）精炼为一条，标注"共识"
 - 四维度评估仅对 Plan 文档输出
 
 ## 第四步：根据审查结果行动
@@ -83,14 +128,14 @@ task(subagent_type="momus", run_in_background=true, load_skills=[], description=
 
 ## 审查判定标准
 
-**Metis 关注**：
-- 隐藏假设和未言明的依赖
-- 并发/竞态/线程安全漏洞
-- 破坏性变更的连锁影响
-- 边界情况和异常路径遗漏
+**design-critic 关注**：
+- 架构矛盾：消费方缺失、存储目的不明
+- 序列化/边界问题：datetime、null、并发
+- 连锁影响：blast radius、API 暴露
+- AI-slop：scope 膨胀、过早抽象、过度校验
 
-**Momus 关注**：
-- 清晰度：所有步骤是否可直接执行（无 TBD/TODO/猜测）
-- 可验证性：每步是否有验收标准（pytest 命令、curl、预期输出）
-- 完整性：是否覆盖 spec 全部需求项
-- 技术准确性：行号、函数签名、import 路径是否与实际代码匹配
+**plan-reviewer 关注**：
+- 引用有效性：文件存在、行号正确
+- 可执行性：每个 task 有起点
+- QA 场景完整性：工具 + 步骤 + 断言
+- 阻断器：内部矛盾、不可能要求
