@@ -161,7 +161,8 @@ export const CategoryRouterPlugin: Plugin = async ({ client, directory, worktree
   }
 }
 
-// opencode 插件加载契约：模块必须导出 { server: Plugin }（PluginModule 形状），
-// 裸函数导出会导致加载器找不到 server 属性、插件不加载。
-export const pluginModule: PluginModule = { server: CategoryRouterPlugin }
+// opencode 插件加载契约：模块必须导出 { id, server: Plugin }（PluginModule 形状），
+// 裸函数导出会导致加载器找不到 server 属性、插件不加载；
+// 文件路径插件（file://，含 plugins/*.js 平铺安装）额外要求默认导出携带 id，否则加载器报 "Path plugin must export id"。
+export const pluginModule: PluginModule = { id: "category-router", server: CategoryRouterPlugin }
 export default pluginModule
