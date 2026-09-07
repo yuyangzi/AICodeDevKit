@@ -99,6 +99,7 @@ describe("CategoryRouterPlugin", () => {
     const calls: Array<unknown> = []
     const client = makeClient({
       session: {
+        messages: async () => ({ data: [{ info: { role: "assistant" }, parts: [{ type: "text", text: "child result" }] }] }),
         promptAsync: async (a: unknown) => { calls.push(a); return { data: undefined } },
       },
     })
@@ -109,5 +110,24 @@ describe("CategoryRouterPlugin", () => {
     // now emit idle for the child
     await (plugin.event as (i: { event: { type: string; properties?: Record<string, unknown> } }) => Promise<void>)({ event: { type: "session.idle", properties: { sessionID: "ses-child" } } })
     expect(calls.length).toBeGreaterThan(0)
+  })
+
+  test("event hook does not wake parent when child idle has no assistant reply (interrupted)", async () => {
+    const calls: Array<unknown> = []
+    const client = makeClient({
+      session: {
+        messages: async () => ({ data: [{ info: { role: "user" }, parts: [{ type: "text", text: "the task prompt" }] }] }),
+        promptAsync: async (a: unknown) => { calls.push(a); return { data: undefined } },
+      },
+    })
+    const plugin = await pluginModule.server({ client: client as never, directory: dir, worktree: dir, project: {} as never, experimental_workspace: {} as never, serverUrl: new URL("http://localhost"), $: {} as never })
+    // register a task via background delegate first
+    const toolDef = plugin.tool?.delegate_task
+    await toolDef!.execute({ category: "deep", prompt: "do w", run_in_background: true } as never, ctx as never)
+    const callsAfterStart = calls.length
+    expect(callsAfterStart).toBeGreaterThan(0)
+    // emit idle: child's last message is only a user prompt -> no assistant reply -> no wake
+    await (plugin.event as (i: { event: { type: string; properties?: Record<string, unknown> } }) => Promise<void>)({ event: { type: "session.idle", properties: { sessionID: "ses-child" } } })
+    expect(calls.length).toBe(callsAfterStart)
   })
 })

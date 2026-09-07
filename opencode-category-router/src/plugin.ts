@@ -105,7 +105,12 @@ export const CategoryRouterPlugin: Plugin = async ({ client, directory, worktree
           if (args.run_in_background) {
             const taskId = sessionID
             await registry.add({ sessionID, parentID: context.sessionID, taskId, category: categoryName, notified: false, failed: false })
-            await client.session.promptAsync({ path: { id: sessionID }, body })
+            try {
+              await client.session.promptAsync({ path: { id: sessionID }, body })
+            } catch {
+              // promptAsync 抛错时返回失败状态，不阻塞编排者（spec §7.1 步骤5）
+              return `Background task failed to start (category=${categoryName}) for task_id=${taskId}`
+            }
             return `Background task started. task_id=${taskId} category=${categoryName}.`
           }
 
@@ -113,7 +118,10 @@ export const CategoryRouterPlugin: Plugin = async ({ client, directory, worktree
           const abortChild = (): void => {
             client.session.delete({ path: { id: sessionID } }).catch(() => {})
           }
-          if (context.abort.aborted) abortChild()
+          if (context.abort.aborted) {
+            abortChild()
+            return "Task cancelled (parent session aborted)."
+          }
           context.abort.addEventListener("abort", abortChild, { once: true })
           try {
             const resp = await client.session.prompt({ path: { id: sessionID }, body })
@@ -136,10 +144,18 @@ export const CategoryRouterPlugin: Plugin = async ({ client, directory, worktree
       if (!task || task.notified) return
       const msgs = await (client as MessagesClient).session.messages({ path: { id: sessionID } }).catch(() => ({ data: [] }))
       const list = msgs?.data ?? []
+      if (list.length === 0) return
       const last = list[list.length - 1]
-      const failed = Boolean(last?.info?.error)
-      await notifyParent(task, failed)
-      await registry.markNotified(sessionID, failed)
+      // 与 reconcile 同 gate：仅当最后一条是 assistant 回复才视为完成（spec §13），
+      // 被掐断的子会话只有 user prompt，不得误报"完成"。
+      if (!last?.info || last.info.role !== "assistant") return
+      const failed = Boolean(last.info.error)
+      try {
+        await notifyParent(task, failed)
+        await registry.markNotified(sessionID, failed)
+      } catch {
+        // 尽力而为（spec §9）：通知失败不标记，留待后续 event/reconcile 重试
+      }
     },
 
     "experimental.chat.system.transform": async (_input, output) => {
