@@ -50,3 +50,6 @@ htmlcov/
 
 # Windows ADS metadata
 *:Zone.Identifier
+
+# Worktrees
+.worktrees/
