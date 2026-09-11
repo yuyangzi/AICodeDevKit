@@ -1,0 +1,41 @@
+{
+  "visual-engineering": {
+    "description": "Visual design, UI/UX, frontend, styling, animation, and design systems",
+    "model": "anthropic/claude-fable-5-1",
+    "variant": "max"
+  },
+  "ultrabrain": {
+    "description": "Use ONLY for genuinely hard, logic-heavy tasks. Give clear goals only, not step-by-step instructions.",
+    "model": "openai/gpt-6-astra",
+    "variant": "max"
+  },
+  "deep": {
+    "description": "Deep autonomous problem-solving for complex research. ONE goal + ONE deliverable per call.",
+    "model": "openai/gpt-6-astra",
+    "variant": "high"
+  },
+  "artistry": {
+    "description": "Complex problem-solving with unconventional, creative approaches",
+    "model": "anthropic/claude-fable-5-1",
+    "variant": "max"
+  },
+  "quick": {
+    "description": "Trivial tasks - single file changes, typo fixes, simple modifications",
+    "model": "kimi-for-coding/kimi-for-coding-highspeed"
+  },
+  "unspecified-low": {
+    "description": "Tasks that don't fit other categories, low effort required",
+    "model": "xai/grok-4.6",
+    "variant": "xhigh"
+  },
+  "unspecified-high": {
+    "description": "Tasks that don't fit other categories, high effort required",
+    "model": "openai/gpt-6-astra",
+    "variant": "high"
+  },
+  "writing": {
+    "description": "Documentation, prose, and writing tasks",
+    "model": "anthropic/claude-fable-5-1",
+    "variant": "medium"
+  }
+}

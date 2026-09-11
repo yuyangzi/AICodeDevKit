@@ -1,28 +1,6 @@
 import { join } from "node:path"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 
-export interface AvailableModelsClient {
-  provider: { list(): Promise<{ data?: { all?: Array<{ id: string; models?: Record<string, unknown> }>; connected?: string[] } }> }
-}
-
-export async function resolveAvailableModels(client: AvailableModelsClient): Promise<Set<string>> {
-  try {
-    const res = await client.provider.list()
-    const data = res.data
-    const connected = new Set(data?.connected ?? [])
-    const out = new Set<string>()
-    for (const provider of data?.all ?? []) {
-      if (!connected.has(provider.id)) continue
-      for (const modelID of Object.keys(provider.models ?? {})) {
-        out.add(`${provider.id}/${modelID}`)
-      }
-    }
-    return out
-  } catch {
-    return new Set()
-  }
-}
-
 export interface RegisteredTask {
   sessionID: string
   parentID: string

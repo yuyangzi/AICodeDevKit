@@ -1,11 +1,14 @@
-import { CATEGORIES, CATEGORY_NAMES } from "./categories"
+import type { CategoryConfig } from "./category-config"
 
-export function renderCategoryTable(): string {
-  const rows = CATEGORY_NAMES.map((name) => {
-    const cat = CATEGORIES[name]
-    const variant = cat.variant ? ` (${cat.variant})` : ""
-    return `| \`${name}\` | ${cat.description} | ${cat.model}${variant} |`
-  }).join("\n")
+export function renderCategoryTable(categories: CategoryConfig): string {
+  const rows = Object.keys(categories)
+    .sort()
+    .map((name) => {
+      const cat = categories[name]
+      const variant = cat.variant ? ` (${cat.variant})` : ""
+      return `| \`${name}\` | ${cat.description} | ${cat.model}${variant} |`
+    })
+    .join("\n")
 
   return `### 可用任务类别
 
