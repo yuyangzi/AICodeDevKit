@@ -1,12 +1,18 @@
 import type { CategoryConfig } from "./category-config"
 
+function escapeCell(text: string): string {
+  return text.replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim()
+}
+
 export function renderCategoryTable(categories: CategoryConfig): string {
-  const rows = Object.keys(categories)
-    .sort()
+  const names = Object.keys(categories).sort()
+  if (names.length === 0) return ""
+
+  const rows = names
     .map((name) => {
       const cat = categories[name]
       const variant = cat.variant ? ` (${cat.variant})` : ""
-      return `| \`${name}\` | ${cat.description} | ${cat.model}${variant} |`
+      return `| \`${name}\` | ${escapeCell(cat.description)} | ${cat.model}${variant} |`
     })
     .join("\n")
 
@@ -16,5 +22,5 @@ export function renderCategoryTable(categories: CategoryConfig): string {
 |---|---|---|
 ${rows}
 
-委托子任务时使用 delegate_task(category=..., prompt=...) 指定工作类型，不要手动选模型。`
+（编排者）委托子任务时使用 task(subagent_type="<类别名>", prompt=..., description=...)，指定工作类型，不要手动选模型；子代理自身不应再派发下级子任务。`
 }
