@@ -1,9 +1,13 @@
-import { describe, expect, test, vi } from "vitest"
+import { describe, expect, test, vi, afterEach } from "vitest"
 import { DEFAULT_CATEGORIES, loadCategoryConfig, parseCategoryModel, sanitizeConfig } from "../src/category-config"
 
 function silencedWarn(): ReturnType<typeof vi.spyOn> {
   return vi.spyOn(console, "warn").mockImplementation(() => {})
 }
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 const expectedNames = [
   "artistry",
@@ -31,9 +35,16 @@ describe("DEFAULT_CATEGORIES", () => {
 })
 
 describe("loadCategoryConfig", () => {
-  test("uses bundled defaults when options are absent", () => {
+  test("uses bundled defaults when the categories option is absent", () => {
     expect(loadCategoryConfig(undefined)).toEqual(DEFAULT_CATEGORIES)
     expect(loadCategoryConfig({})).toEqual(DEFAULT_CATEGORIES)
+  })
+
+  test("does not warn when categories are absent", () => {
+    const warn = silencedWarn()
+    loadCategoryConfig(undefined)
+    loadCategoryConfig({})
+    expect(warn).not.toHaveBeenCalled()
   })
 
   test("uses user categories when valid", () => {
@@ -44,21 +55,38 @@ describe("loadCategoryConfig", () => {
     expect(config.custom).toEqual({ description: "c", model: "openai/gpt-6-astra", variant: "high" })
   })
 
-  test("falls back to defaults and warns when categories are malformed", () => {
+  test("falls back to defaults and warns when categories is not an object", () => {
     const warn = silencedWarn()
-    expect(loadCategoryConfig({ categories: { bad: { model: "no-provider" } } })).toEqual(DEFAULT_CATEGORIES)
-    expect(loadCategoryConfig({ categories: {} })).toEqual(DEFAULT_CATEGORIES)
     expect(loadCategoryConfig({ categories: "nope" })).toEqual(DEFAULT_CATEGORIES)
-    expect(warn).toHaveBeenCalledTimes(3)
-    warn.mockRestore()
+    expect(loadCategoryConfig({ categories: ["a"] })).toEqual(DEFAULT_CATEGORIES)
+    expect(warn).toHaveBeenCalled()
   })
 
-  test("does not warn when categories are absent", () => {
+  test("treats an explicit empty table as disabling all categories", () => {
     const warn = silencedWarn()
-    loadCategoryConfig(undefined)
-    loadCategoryConfig({})
-    expect(warn).not.toHaveBeenCalled()
-    warn.mockRestore()
+    expect(loadCategoryConfig({ categories: {} })).toEqual({})
+    expect(warn).toHaveBeenCalled()
+  })
+
+  test("skips a malformed single entry and keeps the rest", () => {
+    const warn = silencedWarn()
+    const config = loadCategoryConfig({
+      categories: {
+        ok: { description: "good", model: "openai/gpt-6-astra" },
+        bad: { model: "no-description" } as never,
+      },
+    })
+    expect(Object.keys(config)).toEqual(["ok"])
+    expect(warn).toHaveBeenCalled()
+  })
+
+  test("skips an entry whose name is not a valid agent name", () => {
+    const warn = silencedWarn()
+    const config = loadCategoryConfig({
+      categories: { "bad name": { description: "d", model: "a/b" } },
+    })
+    expect(config).toEqual({})
+    expect(warn).toHaveBeenCalled()
   })
 })
 
@@ -68,9 +96,17 @@ describe("sanitizeConfig", () => {
     expect(out).toEqual({ x: { description: "d", model: "a/b", variant: "low" } })
   })
 
-  test("rejects a __proto__ category name", () => {
+  test("skips a __proto__ category name instead of yielding undefined", () => {
     const input = JSON.parse('{"__proto__": {"description": "d", "model": "a/b"}}')
-    expect(sanitizeConfig(input)).toBeUndefined()
+    const warn = silencedWarn()
+    expect(sanitizeConfig(input)).toEqual({})
+    expect(warn).toHaveBeenCalled()
+  })
+
+  test("returns undefined for non-object or array input", () => {
+    expect(sanitizeConfig("nope")).toBeUndefined()
+    expect(sanitizeConfig(["a"])).toBeUndefined()
+    expect(sanitizeConfig(null)).toBeUndefined()
   })
 })
 
